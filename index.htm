@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src= 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f); })(window,document,'script','dataLayer','GTM-W2BD7G2B');</script>
+    <!-- End Google Tag Manager -->
     <!-- Start cookieyes banner --> <script id="cookieyes" type="text/javascript" src="https://cdn-cookieyes.com/client_data/f620520852a83fe857738cefb98c2b8c/script.js"></script> <!-- End cookieyes banner -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -121,6 +124,9 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body class="text-[#333333] dark:text-gray-200 bg-white dark:bg-bhr-dark transition-colors duration-300 overflow-x-hidden">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W2BD7G2B" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
 
     <!-- Navigácia -->
     <nav class="fixed w-full z-50 glass-nav transition-colors duration-300">
@@ -1017,43 +1023,73 @@
             }
         };
 
-        const openCourses = [
-            {
-                day: "12",
-                month: "Máj",
-                title: "AI pre biznis",
-                description: "Strategický workshop pre vedenie",
-                modalId: "biznis"
-            },
-            {
-                day: "05",
-                month: "Máj",
-                title: "AI pre efektívny Sales",
-                description: "Akcelerácia predaja a prospecting",
-                modalId: "sales"
-            },
-            {
-                day: "19",
-                month: "Máj",
-                title: "AI pre efektívne HR",
-                description: "Optimalizácia náboru a onboardingu",
-                modalId: "hr"
-            },
-            {
-                day: "09",
-                month: "Jún",
-                title: "Microsoft Copilot (MS 365)",
-                description: "Inteligentný asistent pre balík Office",
-                modalId: "copilot"
-            },
-            {
-                day: "14",
-                month: "Máj",
-                title: "Krok do sveta AI",
-                description: "Univerzálny štart pre celú firmu",
-                modalId: "krok"
-            }
+        // --- Automatické filtrovanie termínov podľa aktuálneho dátumu ---
+        const slovakMonthMap = {
+            'január': 0, 'januára': 0,
+            'február': 1, 'februára': 1,
+            'marec': 2, 'marca': 2,
+            'apríl': 3, 'apríla': 3,
+            'máj': 4, 'mája': 4,
+            'jún': 5, 'júna': 5,
+            'júl': 6, 'júla': 6,
+            'august': 7, 'augusta': 7,
+            'september': 8, 'septembra': 8,
+            'október': 9, 'októbra': 9,
+            'november': 10, 'novembra': 10,
+            'december': 11, 'decembra': 11
+        };
+        const slovakMonthDisplay = ['Január','Február','Marec','Apríl','Máj','Jún','Júl','August','September','Október','November','December'];
+
+        function parseSlovakDate(str) {
+            const m = str.match(/(\d{1,2})\.\s+(\S+)\s+(\d{4})/);
+            if (!m) return null;
+            const month = slovakMonthMap[m[2].toLowerCase()];
+            if (month === undefined) return null;
+            return new Date(parseInt(m[3], 10), month, parseInt(m[1], 10));
+        }
+
+        // Odstránenie uplynulých termínov z workshopData (ovplyvní aj rozbaľovaciu lištu v modále)
+        (function filterExpiredDates() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            Object.keys(workshopData).forEach(key => {
+                const ws = workshopData[key];
+                if (Array.isArray(ws.dates) && ws.dates.length > 0) {
+                    ws.dates = ws.dates.filter(d => {
+                        const parsed = parseSlovakDate(d);
+                        return !parsed || parsed >= today;
+                    });
+                }
+            });
+        })();
+
+        // Metadáta pre hlavný pohľad (popisky) – dátum a mesiac sa doplnia automaticky
+        const openCourseMeta = [
+            { modalId: "biznis",  description: "Strategický workshop pre vedenie" },
+            { modalId: "sales",   description: "Akcelerácia predaja a prospecting" },
+            { modalId: "hr",      description: "Optimalizácia náboru a onboardingu" },
+            { modalId: "copilot", description: "Inteligentný asistent pre balík Office" },
+            { modalId: "krok",    description: "Univerzálny štart pre celú firmu" }
         ];
+
+        // Dynamické vytvorenie openCourses: pre každý kurz vyberie najbližší nadchádzajúci termín
+        const openCourses = openCourseMeta.map(meta => {
+            const ws = workshopData[meta.modalId];
+            if (!ws || !Array.isArray(ws.dates) || ws.dates.length === 0) return null;
+            const parsed = ws.dates
+                .map(d => ({ str: d, date: parseSlovakDate(d) }))
+                .filter(x => x.date)
+                .sort((a, b) => a.date - b.date);
+            if (parsed.length === 0) return null;
+            const first = parsed[0].date;
+            return {
+                day: String(first.getDate()).padStart(2, '0'),
+                month: slovakMonthDisplay[first.getMonth()],
+                title: ws.title,
+                description: meta.description,
+                modalId: meta.modalId
+            };
+        }).filter(c => c !== null);
 
         function renderCourses() {
             const container = document.getElementById('courses-container');
