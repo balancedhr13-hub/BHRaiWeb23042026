@@ -957,7 +957,14 @@
                     { time: '13:00 - 14:00', label: 'Live testovanie a Q&A' }
                 ],
                 for: 'Celý tím, od administratívy po top management.',
-                dates: ['25. jún 2026 (štvrtok), Trenčín (8:30 – 13:30)', '2. jún 2026 (utorok), Bratislava (8:30 – 13:30)']
+                dates: [
+                    '25. jún 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '9. júla 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '20. augusta 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '1. októbra 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '12. novembra 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '17. decembra 2026 (štvrtok), Trenčín (8:30 – 13:30)'
+                ]
             },
             biznis: {
                 title: 'AI pre biznis',
@@ -972,7 +979,13 @@
                     { time: '5 hodín', label: 'Audit procesov + Strategický framework + Implementačný plán' }
                 ],
                 for: 'Majitelia MSP, riaditelia a manažéri.',
-                dates: ['18. jún 2026 (štvrtok), Trenčín (8:30 – 13:30)', '4. jún 2026 (štvrtok), Bratislava (9:00 – 14:00)']
+                dates: [
+                    '2. júla 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '13. augusta 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '24. septembra 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '5. novembra 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '8. decembra 2026 (utorok), Trenčín (8:30 – 13:30)'
+                ]
             },
             hr: {
                 title: 'AI pre efektívne HR',
@@ -990,7 +1003,13 @@
                     { time: 'Blok 3', label: 'Praktický workshop s reálnymi HR dátami' }
                 ],
                 for: 'HR Manažéri, Recruitment špecialisti.',
-                dates: ['16. jún 2026 (utorok), Trenčín (8:30 – 13:30)', '26. mája 2026 (utorok), Trenčín (8:30 – 13:30)']
+                dates: [
+                    '16. júla 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '27. augusta 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '20. októbra 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '24. novembra 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '22. decembra 2026 (utorok), Trenčín (8:30 – 13:30)'
+                ]
             },
             sales: {
                 title: 'AI pre efektívny Sales',
@@ -1005,7 +1024,13 @@
                     { time: '5 hodín', label: 'Lead gen moduly + Sales Copywriting' }
                 ],
                 for: 'Obchodní riaditelia a Sales tímy.',
-                dates: ['11. júna 2026 (štvrtok), Trenčín (8:30 – 13:30)', '28. mája 2026 (štvrtok), Bratislava (9:00 – 14:00)']
+                dates: [
+                    '7. júla 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '18. augusta 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '29. septembra 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '10. novembra 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '15. decembra 2026 (utorok), Trenčín (8:30 – 13:30)'
+                ]
             },
             copilot: {
                 title: 'Microsoft Copilot (MS 365)',
@@ -1020,7 +1045,13 @@
                     { time: '5 hodín', label: 'Deep-dive do aplikácií MS 365 s Copilotom' }
                 ],
                 for: 'Používatelia balíka Microsoft 365.',
-                dates: ['9. jún 2026 (utorok), Trenčín (8:30 – 13:30)', '11. jún 2026 (štvrtok), Bratislava (9:00 – 14:00)']
+                dates: [
+                    '14. júla 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '25. augusta 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '6. októbra 2026 (utorok), Trenčín (8:30 – 13:30)',
+                    '19. novembra 2026 (štvrtok), Trenčín (8:30 – 13:30)',
+                    '10. decembra 2026 (štvrtok), Trenčín (8:30 – 13:30)'
+                ]
             },
             admin: {
                 title: 'AI kurz na mieru',
@@ -1258,7 +1289,14 @@
             } 
             else {
                 const safeTitle = d.title.replace(/'/g, "\\'");
-                const datesList = d.dates.map(date => 
+                // Zobrazíme len 2 najbližšie termíny; ostatné ostávajú v poli "dates" ako záloha
+                // a automaticky sa zobrazia, keď tieto dva uplynú. Stačí meniť/dopĺňať pole vyššie.
+                const visibleDates = d.dates
+                    .map(date => ({ str: date, date: parseSlovakDate(date) }))
+                    .sort((a, b) => (a.date && b.date) ? a.date - b.date : 0)
+                    .slice(0, 2)
+                    .map(x => x.str);
+                const datesList = visibleDates.map(date =>
                     `<li onclick="openOrderForm('${safeTitle}', '${date}')" class="py-3 px-4 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-bhr-red transition cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 text-xs md:text-sm font-bold text-bhr-red whitespace-nowrap">${date}</li>`
                 ).join('');
 
