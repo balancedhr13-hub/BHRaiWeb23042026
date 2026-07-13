@@ -1228,18 +1228,35 @@
         renderCourses();
 
         // --- PRIAMY ODKAZ NA KONKRÉTNY WORKSHOP ---
-        // Použitie: yourpage.html?kurz=hr  alebo  ?kurz=masterclass  atď.
-        // Platné hodnoty: krok | hr | copilot | admin | masterclass | konzultacia
+        // Použitie: ?workshop=hr (otvorí workshop) alebo ?workshop=hr-16-7-2026 (workshop + konkrétny termín)
+        // Platné ID: krok | hr | copilot | admin | masterclass | konzultacia. Starý formát ?kurz=hr stále funguje.
         (function checkUrlParam() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                const kurzParam = urlParams.get('kurz');
+                let kurzParam = urlParams.get('kurz');
+                let preferredDate = null;
+
+                // Nový formát: ?workshop=hr-16-7-2026 (alebo len ?workshop=hr)
+                const wsParam = urlParams.get('workshop');
+                if (wsParam) {
+                    const m = wsParam.match(/^([a-z]+)(?:-(\d{1,2})-(\d{1,2})-(\d{4}))?$/i);
+                    if (m) {
+                        kurzParam = m[1].toLowerCase();
+                        if (m[2] && workshopData[kurzParam] && Array.isArray(workshopData[kurzParam].dates)) {
+                            const target = new Date(parseInt(m[4], 10), parseInt(m[3], 10) - 1, parseInt(m[2], 10)).getTime();
+                            preferredDate = workshopData[kurzParam].dates.find(ds => {
+                                const pd = parseSlovakDate(ds);
+                                return pd && pd.getTime() === target;
+                            }) || null;
+                            // Ak termín neexistuje alebo už uplynul, modal sa otvorí normálne s najbližšími termínmi
+                        }
+                    }
+                }
+
                 if (kurzParam && workshopData[kurzParam]) {
-                    // Krátky timeout aby sa stránka stihla vyrenderovať pred otvorením modálu
                     setTimeout(() => {
                         const isInternal = !workshopData[kurzParam].dates || workshopData[kurzParam].dates.length === 0;
-                        openModal(kurzParam, isInternal);
-                        // Scrollujeme na sekciu s workshopmi pre lepší kontext
+                        openModal(kurzParam, isInternal, preferredDate);
                         const targetSection = isInternal ? document.getElementById('internne') : document.getElementById('otvorene');
                         if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }, 600);
@@ -1247,7 +1264,7 @@
             } catch(e) {}
         })();
 
-        function openModal(id, isInternal = false) {
+        function openModal(id, isInternal = false, preferredDate = null) {
             const d = workshopData[id];
             const content = `
                 <div class="mb-6 md:mb-10 text-left">
@@ -1306,6 +1323,29 @@
                     `<li onclick="openOrderForm('${safeTitle}', '${date}')" class="py-3 px-4 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-bhr-red transition cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 text-xs md:text-sm font-bold text-bhr-red whitespace-nowrap">${date}</li>`
                 ).join('');
 
+                if (preferredDate && d.dates.includes(preferredDate)) {
+                    // Priamy odkaz na konkrétny termín: hlavné CTA rovno na prihlášku
+                    const otherDates = visibleDates.filter(x => x !== preferredDate);
+                    const otherList = otherDates.map(date =>
+                        `<li onclick="openOrderForm('${safeTitle}', '${date}')" class="py-3 px-4 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-bhr-red transition cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 text-xs md:text-sm font-bold text-bhr-red whitespace-nowrap">${date}</li>`
+                    ).join('');
+                    footerHtml = `
+                        <button onclick="openOrderForm('${safeTitle}', '${preferredDate}')" class="w-full md:flex-[3] bg-bhr-red text-white px-6 py-3.5 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg text-center hover:bg-bhr-dark-red transition shadow-lg shadow-red-100 dark:shadow-none">Prihlásiť sa – ${preferredDate.split(',')[0]}</button>
+                        ${otherDates.length ? `
+                        <div class="relative group w-full md:w-auto">
+                            <button class="w-full bg-white dark:bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-5 py-3 rounded-xl md:rounded-2xl font-bold text-sm text-center hover:border-bhr-red hover:text-bhr-red transition flex justify-center items-center gap-2">
+                                Iné termíny
+                                <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="absolute top-full md:bottom-full md:top-auto left-0 mt-2 md:mt-0 md:mb-3 w-full md:w-max bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden">
+                                <ul class="text-gray-700 dark:text-gray-300 text-left">
+                                    ${otherList}
+                                </ul>
+                            </div>
+                        </div>` : ''}
+                        <button onclick="closeModal()" class="w-full md:w-auto bg-transparent border-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-4 py-2 font-semibold text-sm transition underline underline-offset-2">Zavrieť</button>
+                    `;
+                } else {
                 footerHtml = `
                     <div class="relative group w-full md:flex-[3]">
                         <button class="w-full bg-bhr-red text-white px-6 py-3.5 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg text-center hover:bg-bhr-dark-red transition shadow-lg shadow-red-100 dark:shadow-none flex justify-center items-center gap-2">
@@ -1320,6 +1360,7 @@
                     </div>
                     <button onclick="closeModal()" class="w-full md:w-auto bg-transparent border-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-4 py-2 font-semibold text-sm transition underline underline-offset-2">Zavrieť</button>
                 `;
+                }
             }
 
             document.getElementById('modalFooter').innerHTML = footerHtml;
